@@ -60,7 +60,7 @@ app.post('/signup', function(req, res){
         res.render("Invalid");
     }else{
         var verification_token = randomstring.generate();
-        var url = "http://localhost:8080/"+email+"/"+verification_token;
+        var url = "http://localhost:8080/verify_email/"+email+"/"+verification_token;
         var mailOptions = {
             from: from_email,
             to: email,
@@ -74,7 +74,13 @@ app.post('/signup', function(req, res){
             }else{
                 transporter.sendMail(mailOptions, function(error, info){
                     if(error){
-                        res.end("Something went wrong");
+                        query = "Delete from users where email='"+email+"'";
+                        con.query(query, function(derror, success_result){
+                            if(derror) throw derror;
+                            if(success_result.affectedRows > 0){
+                                res.end("Something went wrong");
+                            }
+                        });
                     }else{
                       res.end("Mail sent successfully");  
                     }
@@ -90,27 +96,126 @@ app.post('/login', function(req, res){
     var email = req.body.email;
     var password = req.body.password;
 
-    var query = "Select first_name, last_name, email, password from users where email='"+email+"' and verified="+1;
+    var query = "Select first_name, last_name, email, password, verified from users where email='"+email+"'";
     con.query(query, function(err, result){
         if(err) throw err;
         if(!result || Object.keys(result).length == 0){
             res.end("Incorrect email");
         }else{
-            if(bcrypt.compareSync(password,result[0].password)){
-                res.end(JSON.stringify(result[0]));
-            }else{
-                res.end("Incorrect password");
+            if(result[0].verified == 1){
+                if(bcrypt.compareSync(password,result[0].password)){
+                    res.end(JSON.stringify(result[0]));
+                }else{
+                    res.end("Incorrect password");
+                }
+            }
+            else{
+                res.end("verify your email first");
             }
         }
     });
 });
 
 
-app.get('/:email/:token', function(req, res){
+app.get('/verify_email/:email/:token', function(req, res){
     var email = req.params.email;
     var token = req.params.token;
-    
+    var query = "Update users set verified=1, verification_token=NULL where email='"+email+"' and verofication_token='"+token+"'";
+    con.query(query, function(err, result){
+        if(err){
+            res.end("Something went wrong");
+        }else{
+            if(result.affectedRows > 0){
+                query =  "Select first_name, last_name, email from users where email='"+email+"'";
+                con.query(query, function(error, result){
+                    if(error) throw error;
+                    res.end(JSON.stringify(result));
+                });
+            }
+        }
+    });
 });
+
+
+app.get('/password_reset_mail', function(req, res){
+    var email = req.body.email;
+    var token = randomstring.generate();
+    var url = "http://localhost:8080/password_reset_confirm/"+email+"/"+verification_token;
+    var mailOptions = {
+        from: from_email,
+        to: email,
+        subject: 'Reset your password',
+        text:'<a href='+url+'>'+url+'</a>'
+    }
+    var query = "Update users set password_reset_token='"+token+"' where email='"+email+"'";
+        con.query(query, function(err, result){
+            if(err){
+                res.end("Something went wrong");
+            }else{
+                if(result.affectedRows > 0){
+                    transporter.sendMail(mailOptions, function(error, info){
+                        if(error){
+                            query = "Update users set password_reset_token=NULL where email='"+email+"'";
+                            con.query(query, function(derror, success_result){
+                                if(derror) throw derror;
+                                if(success_result.affectedRows > 0){
+                                    res.end("Something went wrong");    
+                                }
+                            });
+                        }else{
+                            res.end("Mail sent successfully");
+                        }
+                    });
+                }
+            }
+        });
+
+});
+
+app.get('/password_reset_confirm/:email/:token', function(req, res){
+    var email = req.params.email;
+    var token = req.params.token;
+    var query = "Update users set password_reset_token=NULL where email='"+email+"' and password_reset_token='"+token+"'";
+    con.query(query, function(err, result){
+        if(err){
+            res.end("Something went wrong");
+        }else{
+            if(result.affectedRows > 0){
+                query =  "Select first_name, last_name, email from users where email='"+email+"'";
+                con.query(query, function(error, result){
+                    if(error) throw error;
+                    res.end(JSON.stringify(result));
+                });
+            }
+        }
+    });
+
+});
+
+app.post('/reset_password',function(req, res){
+    var email = req.body.email;
+    var password = req.body.password;
+    var repass = req.body.re_pass;
+    if(password == repass){
+        if(!schema.validate(password)){
+            res.end("Password too weak");
+        }else{
+            var query = "Update users set password='"+password+"' where email='"+email+"'";
+            con.query(query, function(error, result){
+                if(error){
+                    res.end("Something went wrong");
+                }else{
+                    if(result.affectedRows > 0){
+                        res.end("Password changed successfully");
+                    }else{
+                        res.end("Email not matched");
+                    }
+                }
+            });
+        }
+    }
+});
+
 
 function verifyCredentials(firstName, lastName, email, password){
     if(!firstName || !lastName || !email || !password ){
