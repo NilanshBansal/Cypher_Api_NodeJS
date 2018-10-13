@@ -40,8 +40,12 @@ con.connect(function(err){
 });
 
 app.set('view engine', 'ejs');
-app.use(bodyParser());
 
+//BODY PARSER CONFIG
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
+  
 app.get('/', function(req, res){
     res.render('index');
 });
@@ -122,6 +126,28 @@ function verifyCredentials(firstName, lastName, email, password){
         return false;
     }
 }
+
+app.get('/search_project',function(req,res){
+    console.log("project name: ",req.query.name);
+    res.send(req.query.name);
+});
+
+app.get('/search_user',function(req,res){
+    console.log("User name: ",req.query.name);
+    res.send(req.query.name);
+});
+
+app.post('/add_project',function(req,res){
+    var projectName = req.body.project_name;
+    var userId = req.body.userId;
+    console.log({projectName,userId});
+});
+
+app.post('/remove_project',function(req,res){
+    var projectName = req.body.project_name;
+    var userId = req.body.userId;
+    console.log({'projectName':projectName,'userId':userId});
+});
 
 
 app.listen(port,function(){
