@@ -9,8 +9,8 @@ var randomstring = require("randomstring");
 var nodemailer = require("nodemailer");
 var port = 8080;
 
-var from_email = 'jatinjain2775@gmail.com';
-var from_pass = 'jatinj@2775';
+var from_email = '';
+var from_pass = '';
 var transporter = nodemailer.createTransport({
     service: 'gmail',
     auth:{
