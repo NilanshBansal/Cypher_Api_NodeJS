@@ -9,8 +9,8 @@ var randomstring = require("randomstring");
 var nodemailer = require("nodemailer");
 var port = 8080;
 
-var from_email = 'jatinjain2775@gmail.com';
-var from_pass = 'jatinj@2775';
+var from_email = '';
+var from_pass = '';
 var transporter = nodemailer.createTransport({
     service: 'gmail',
     auth:{
@@ -50,6 +50,7 @@ app.get('/', function(req, res){
     res.render('index');
 });
 
+
 app.post('/signup', function(req, res){
     var firstName = req.body.firstName;
     var lastName = req.body.lastName;
@@ -57,7 +58,7 @@ app.post('/signup', function(req, res){
     var password = req.body.password
     var hash_pass = bcrypt.hashSync(password, 10);
     if(!verifyCredentials(firstName, lastName, email, password)){
-        res.render("Invalid");
+        res.end("Invalid");
     }else{
         var verification_token = randomstring.generate();
         var url = "http://localhost:8080/verify_email/"+email+"/"+verification_token;
@@ -65,24 +66,25 @@ app.post('/signup', function(req, res){
             from: from_email,
             to: email,
             subject: 'Verify your account',
-            text:'<a href='+url+'>'+url+'</a>'
+            html:'To Verify your account Click <a href='+url+'>here</a>'
         }
         var query = "Insert into users(first_name, last_name, email, password, verification_token) values ('"+firstName+"','"+lastName+"','"+email+"','"+hash_pass+"','"+verification_token+"')";
         con.query(query, function(err, result){
             if(err){
-                res.end("Something went wrong");
+                res.end(JSON.stringify("Something went wrong in insert"));
             }else{
                 transporter.sendMail(mailOptions, function(error, info){
                     if(error){
+                        console.log(error);
                         query = "Delete from users where email='"+email+"'";
                         con.query(query, function(derror, success_result){
                             if(derror) throw derror;
                             if(success_result.affectedRows > 0){
-                                res.end("Something went wrong");
+                                res.end(JSON.stringify("Something went wrong in mail"));
                             }
                         });
                     }else{
-                      res.end("Mail sent successfully");  
+                      res.end(JSON.stringify("Mail sent successfully"));  
                     }
                 });
             }
@@ -120,10 +122,11 @@ app.post('/login', function(req, res){
 app.get('/verify_email/:email/:token', function(req, res){
     var email = req.params.email;
     var token = req.params.token;
-    var query = "Update users set verified=1, verification_token=NULL where email='"+email+"' and verofication_token='"+token+"'";
+    var query = "Update users set verified=1, verification_token=NULL where email='"+email+"' and verification_token='"+token+"'";
+    // console.log(query)
     con.query(query, function(err, result){
         if(err){
-            res.end("Something went wrong");
+            res.end(err);
         }else{
             if(result.affectedRows > 0){
                 query =  "Select first_name, last_name, email from users where email='"+email+"'";
@@ -137,15 +140,15 @@ app.get('/verify_email/:email/:token', function(req, res){
 });
 
 
-app.get('/password_reset_mail', function(req, res){
+app.post('/password_reset_mail', function(req, res){
     var email = req.body.email;
     var token = randomstring.generate();
-    var url = "http://localhost:8080/password_reset_confirm/"+email+"/"+verification_token;
+    var url = "http://localhost:8080/password_reset_confirm/"+email+"/"+token;
     var mailOptions = {
         from: from_email,
         to: email,
         subject: 'Reset your password',
-        text:'<a href='+url+'>'+url+'</a>'
+        html:'To Verify Click <a href='+url+'>here</a>'
     }
     var query = "Update users set password_reset_token='"+token+"' where email='"+email+"'";
         con.query(query, function(err, result){
@@ -175,6 +178,7 @@ app.get('/password_reset_mail', function(req, res){
 app.get('/password_reset_confirm/:email/:token', function(req, res){
     var email = req.params.email;
     var token = req.params.token;
+    
     var query = "Update users set password_reset_token=NULL where email='"+email+"' and password_reset_token='"+token+"'";
     con.query(query, function(err, result){
         if(err){
@@ -200,7 +204,8 @@ app.post('/reset_password',function(req, res){
         if(!schema.validate(password)){
             res.end("Password too weak");
         }else{
-            var query = "Update users set password='"+password+"' where email='"+email+"'";
+            var hash_pass = bcrypt.hashSync(password, 10);
+            var query = "Update users set password='"+hash_pass+"' where email='"+email+"'";
             con.query(query, function(error, result){
                 if(error){
                     res.end("Something went wrong");
@@ -213,6 +218,8 @@ app.post('/reset_password',function(req, res){
                 }
             });
         }
+    }else{
+        res.end("Password does not match");
     }
 });
 
@@ -230,7 +237,9 @@ function verifyCredentials(firstName, lastName, email, password){
     if(!schema.validate(password)){
         return false;
     }
+    return true;
 }
+
 
 app.get('/search_project',function(req,res){
     console.log("project name: ",req.query.name);
