@@ -1,4 +1,3 @@
-//ASK JATIN TO ADD projects column to users Table when creating the Table and assign it to NULL
 
 var express = require('express');
 var app = express();
@@ -242,20 +241,28 @@ function verifyCredentials(firstName, lastName, email, password){
     return true;
 }
 
+//CHECK THIS 
 app.post('/add_project_to_database',function(req,res){
     var projectName = req.body.project_name;
-
     //CHECK IF PROJECT EXISTS
-    var query = "Select project_name from projects where project_name = '" + projectName + "'";
-    return res.send('Project Already Exists!');
-
+    var query_search_project = "Select project_name from projects where project_name = '" + projectName + "'";
+    con.query(query_search_project,function(error,result){
+        if(error){
+            console.log('PROJECT NOT FOUND ! ');
+            //res.send('Project Not Found!');
+        }
+        else{
+            return res.send('PROJECT Already EXISTS');
+        }
+    });
+    
     //INSERTING PROJECT
     
     var query = "Insert into projects(project_name) values ('" + projectName + "')";
     
     con.query(query, function(err, result){
         if(err){
-            var query_create = "CREATE TABLE IF NOT EXISTS projects (project_name VARCHAR(10))";
+            var query_create = "CREATE TABLE IF NOT EXISTS projects (project_name VARCHAR(50), ID int NOT NULL AUTO_INCREMENT , PRIMARY KEY (ID))"; 
             con.query(query_create,function(error,res_create){
                 if(error){
                     console.log(error);
@@ -270,6 +277,7 @@ app.post('/add_project_to_database',function(req,res){
                         }
                         else{
                             console.log("RECORD INSERTED SUCCESSFULLY !");
+                            return res.send("RECORD INSERTED SUCCESSFULLY !");
                         }
                     });
                 }
@@ -281,19 +289,110 @@ app.post('/add_project_to_database',function(req,res){
 });
 
 
+app.get('/search_project/:project_name',function(req,res){
+    console.log(req.params.project_name);
+    var projectName = req.params.project_name;
+    //CHECK IF PROJECT EXISTS
+    var query_search_project = "Select * from projects where project_name = '" + projectName + "'";
+    console.log(query_search_project);
+    con.query(query_search_project,function(error,result){
+        if(error){
+            console.log('PROJECT NOT FOUND ! ');
+            return res.send('Project Not Found!');
+        }
+        else{
+            
+            if (!result.length){
+                console.log("Project Does not Exist In table!");
+                return res.send("NO such project Exists!");
+            }
+            else{
+                console.log("RESULT: ",result);
+                console.log(result[0]['ID'],result[0]['project_name']);
+                return res.send('PROJECT EXISTS');
+            }
+            
+        }
+    });
+});
+
+
 app.post('/add_project_to_user',function(req,res){
-    var projectName = req.body.project_name;
+    var projectId = req.body.projectId;
     var userEmail= req.body.userEmail;
     
-    console.log({projectName,userEmail});
+    console.log({projectId,userEmail});
     
+    var userProjectsString ;
+    var userProjectsStringArray = [];
+    var userProjectsIntArray = [];
+    var query = "Select projects from users where email = '" + userEmail + "'";  
 
-    var query = "Insert into users(projects) values ('" + projectName + "') where email = '" + userEmail + "'";
+    con.query(query,function(err,result){
+        if(err){
+            console.log(err);
+            // return res.send(err);
+        }
+        else{
+            if(!result.length){
+                console.log('No user by that email exists !');
+                return res.send('NO user by that email exists !');
+            }
+            else{
+                console.log("RESULT ",result[0]['projects']);
+                if(result[0]['projects']){
+                    userProjectsString = result[0]['projects'];
+                    userProjectsStringArray = userProjectsString.split(",");
+                    userProjectsStringArray.forEach(function(projectId){
+                        userProjectsIntArray.push(parseInt(projectId));
+                    });
+                    console.log(userProjectsIntArray);
+                    if(userProjectsIntArray.length > 4 ){
+                        return res.send('Max Project Limit Reached');
+                    }
+                    else if(userProjectsIntArray.indexOf(parseInt(projectId)) != -1){
+                        return res.send('Project Already Added to users Profile');
+                    }
+                    else{
+                        userProjectsString += "," + projectId;
+                        var update_query = "UPDATE users SET projects ='" + userProjectsString +"' Where email =" + "'" + userEmail + "'";
+                        console.log(update_query);
+                        con.query(update_query,function(error_update,res_update){
+                            if(error_update){
+                                console.log('FAILED TO UPDATE!');
+                                res.send('UPDATE FAILED!');
+                            }
+                            else{
+                                return res.send('Project Added to User Profile !');
+                            }
+                        });
+                        
+                    }
+                }
+                else{
+                    console.log('no PROJECT, FIELD NULL for user');
+                    var update_query = "UPDATE users SET projects ='" + projectId +"' Where email =" + "'" + userEmail + "'";
+                    console.log(update_query);
+                    con.query(update_query,function(error_update,res_update){
+                        if(error_update){
+                            console.log('FAILED TO UPDATE!');
+                            res.send('UPDATE FAILED!');
+                        }
+                        else{
+                            return res.send('Project Added to User Profile !');
+                        }
+                    });
+                }
+                
+            }
+        }
+    });
+    // var query = "Insert into users(projects) values ('" + projectName + "') where email = '" + userEmail + "'";
 
 });
 
 
-app.post('/remove_project',function(req,res){
+app.post('/remove_project_from_user',function(req,res){
     var projectName = req.body.project_name;
     var userId = req.body.userId;
     console.log({'projectName':projectName,'userId':userId});
