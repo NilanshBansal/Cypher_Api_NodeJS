@@ -393,9 +393,75 @@ app.post('/add_project_to_user',function(req,res){
 
 
 app.post('/remove_project_from_user',function(req,res){
-    var projectName = req.body.project_name;
-    var userId = req.body.userId;
-    console.log({'projectName':projectName,'userId':userId});
+    var projectId = req.body.projectId;
+    var userEmail= req.body.userEmail;
+    console.log({'projectId':projectId,'userEmail':userEmail});
+
+    var userProjectsString ;
+    var userProjectsStringArray = [];
+    var userProjectsIntArray = [];
+    var query = "Select projects from users where email = '" + userEmail + "'";  
+
+    con.query(query,function(err,result){
+        if(err){
+            console.log(err);
+            // return res.send(err);
+        }
+        else{
+            if(!result.length){
+                console.log('No user by that email exists !');
+                return res.send('NO user by that email exists !');
+            }
+            else{
+                console.log("RESULT ",result[0]['projects']);
+                if(result[0]['projects']){
+                    userProjectsString = result[0]['projects'];
+                    userProjectsStringArray = userProjectsString.split(",");
+                    userProjectsStringArray.forEach(function(projectId){
+                        userProjectsIntArray.push(parseInt(projectId));
+                    });
+                    console.log(userProjectsIntArray);
+
+                    if(userProjectsIntArray.indexOf(parseInt(projectId)) == -1){
+                        console.log('No such Project is added to the user!');
+                        res.send('No such Project is added to the user!');
+                    }   
+                    else{
+                        var updateProjectsString = "";
+                        var projectIndex = userProjectsIntArray.indexOf(parseInt(projectId));
+                        userProjectsIntArray.splice(projectIndex, 1);
+                        
+                        userProjectsIntArray.forEach(function(el){
+                            updateProjectsString += el;
+                            updateProjectsString += ','
+                        });
+
+                        updateProjectsString  = updateProjectsString.slice(0,-1);
+                        if(updateProjectsString = ""){
+                            updateProjectsString = NULL;
+                        }
+                        var update_query = "UPDATE users SET projects ='" + updateProjectsString +"' Where email =" + "'" + userEmail + "'";
+
+                        console.log(update_query);
+                        con.query(update_query,function(error_update,res_update){
+                            if(error_update){
+                                console.log('FAILED TO Delete Project!');
+                                res.send('Delete Project FAILED!');
+                            }
+                            else{
+                                return res.send('Project Deleted from Users Profile !');
+                            }
+                        });
+                    }
+                }
+                else{
+                    console.log('no PROJECT, FIELD NULL for user');
+                    res.send('USER HAS NO PROJECTS TO DELETE !');
+                }
+            }
+        }
+
+    });    
 
 });
 
