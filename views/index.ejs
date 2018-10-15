@@ -24,11 +24,17 @@
 		</form>
 		<br>
 		<br>
-		<h3>Add Project</h3>
-		<form action="/add_project" method="post">
+		<h3>Add Project To Database</h3>
+		<form action="/add_project_to_database" method="post">
 			<input type="text" name="project_name" placeholder="PROJECT NAME">
-			<input type="text" name="userId" placeholder="USER ID">
-			<input type="submit" name="add_project" value="add_project">
+			<input type="submit" name="add_project_to_database" value="add_project_to_database">
+		</form>
+
+		<h3>Add Project To User</h3>
+		<form action="/add_project_to_user" method="post">
+			<input type="text" name="project_name" placeholder="PROJECT NAME">
+			<input type="text" name="userEmail" placeholder="USER Email">
+			<input type="submit" name="add_project_to_user" value="add_project_to_user">
 		</form>
 		<br><br>
 		<h3>Remove Project</h3>

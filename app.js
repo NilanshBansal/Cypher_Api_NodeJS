@@ -1,3 +1,5 @@
+//ASK JATIN TO ADD projects column to users Table when creating the Table and assign it to NULL
+
 var express = require('express');
 var app = express();
 var mysql = require('mysql');
@@ -240,27 +242,62 @@ function verifyCredentials(firstName, lastName, email, password){
     return true;
 }
 
-
-app.get('/search_project',function(req,res){
-    console.log("project name: ",req.query.name);
-    res.send(req.query.name);
-});
-
-app.get('/search_user',function(req,res){
-    console.log("User name: ",req.query.name);
-    res.send(req.query.name);
-});
-
-app.post('/add_project',function(req,res){
+app.post('/add_project_to_database',function(req,res){
     var projectName = req.body.project_name;
-    var userId = req.body.userId;
-    console.log({projectName,userId});
+
+    //CHECK IF PROJECT EXISTS
+    var query = "Select project_name from projects where project_name = '" + projectName + "'";
+    return res.send('Project Already Exists!');
+
+    //INSERTING PROJECT
+    
+    var query = "Insert into projects(project_name) values ('" + projectName + "')";
+    
+    con.query(query, function(err, result){
+        if(err){
+            var query_create = "CREATE TABLE IF NOT EXISTS projects (project_name VARCHAR(10))";
+            con.query(query_create,function(error,res_create){
+                if(error){
+                    console.log(error);
+                    res.send(error);
+                }
+                else{
+                    console.log("TABlE CREATED");
+                    con.query(query,function(error_insert,response){
+                        if(error_insert){
+                            console.log(error_insert);
+                            res.send(error_insert);
+                        }
+                        else{
+                            console.log("RECORD INSERTED SUCCESSFULLY !");
+                        }
+                    });
+                }
+            });
+        }else{
+            res.send("Successfully Inserted Project");
+        }
+    });
 });
+
+
+app.post('/add_project_to_user',function(req,res){
+    var projectName = req.body.project_name;
+    var userEmail= req.body.userEmail;
+    
+    console.log({projectName,userEmail});
+    
+
+    var query = "Insert into users(projects) values ('" + projectName + "') where email = '" + userEmail + "'";
+
+});
+
 
 app.post('/remove_project',function(req,res){
     var projectName = req.body.project_name;
     var userId = req.body.userId;
     console.log({'projectName':projectName,'userId':userId});
+
 });
 
 
