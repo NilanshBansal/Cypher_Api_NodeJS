@@ -8,7 +8,34 @@ var password_validator = require('password-validator');
 var bcrypt = require("bcrypt");
 var randomstring = require("randomstring");
 var nodemailer = require("nodemailer");
+var mongoose = require("mongoose");
 var port = 8080;
+
+
+//mongoDB schemas
+//// twitter schema
+var twitterSchema= mongoose.Schema({
+    date: String,
+    general_info: Object,
+    project_name: String,
+    twitter_handle_info: Object
+});
+
+////reddit schema
+var redditSchema = mongoose.Schema({
+    date:String,
+    general_info: Object,
+    project_name: String
+});
+
+////github schema
+var githubSchema = mongoose.Schema({
+
+});
+
+var Twitter = mongoose.model('twitter_projects_report', twitterSchema);
+var Reddit = mongoose.model('reddit_projects_report', redditSchema);
+var Github = mongoose.model('github_projects_report',githubSchema);
 
 var from_email = '';
 var from_pass = '';
@@ -222,6 +249,23 @@ app.post('/reset_password', function (req, res) {
     } else {
         res.end("Password does not match");
     }
+});
+
+
+app.get("/project_score",function(req, res){
+    var project = req.body.project_name;
+    var from_date = req.body.from_date;
+    var to_date = req.body.to_date;
+    Twitter.findOne({project_name: project, date: req.body.date}, function(err, data){
+        if(err){
+            res.end(error);
+        }else{
+            res.end(data);
+        }
+    });
+
+
+
 });
 
 
