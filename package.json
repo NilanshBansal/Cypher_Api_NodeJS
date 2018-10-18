@@ -11,9 +11,11 @@
   "dependencies": {
     "bcrypt": "^3.0.1",
     "body-parser": "^1.18.3",
+    "dates-between": "^1.1.0",
     "ejs": "^2.6.1",
     "email-validator": "^2.0.4",
     "express": "^4.16.4",
+    "mongoose": "^5.3.4",
     "mysql": "^2.16.0",
     "nodemailer": "^4.6.8",
     "nodemon": "^1.18.4",

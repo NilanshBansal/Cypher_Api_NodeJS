@@ -1,4 +1,3 @@
-
 var express = require('express');
 var app = express();
 var mysql = require('mysql');
@@ -8,13 +7,46 @@ var password_validator = require('password-validator');
 var bcrypt = require("bcrypt");
 var randomstring = require("randomstring");
 var nodemailer = require("nodemailer");
+var mongoose = require("mongoose");
+var datesBetween = require("dates-between");
 var port = 8080;
+
+var Schema = mongoose.Schema;
+
+//mongodb Connect
+mongoose.connect("mongodb://localhost:27017/twitter", { useNewUrlParser: true });
+
+//mongoDB schemas
+//// twitter schema
+let twitterSchema= new Schema({
+    date: String,
+    general_info: Schema.Types.Mixed,
+    project_name: String,
+    twitter_handle_info: Schema.Types.Mixed
+});
+
+////reddit schema
+var redditSchema = new Schema({
+    date:String,
+    general_info: Schema.Types.Mixed,
+    project_name: String
+});
+
+////github schema
+// var githubSchema = mongoose.Schema({
+
+// });
+
+var Twitter = mongoose.model('twitter_projects_report', twitterSchema);
+var Reddit = mongoose.model('reddit_projects_report', redditSchema);
+// var Github = mongoose.model('github_projects_report',githubSchema);
 
 var from_email = '';
 var from_pass = '';
+
 var transporter = nodemailer.createTransport({
     service: 'gmail',
-    auth: {
+    auth:{
         user: from_email,
         pass: from_pass
     }
@@ -22,27 +54,26 @@ var transporter = nodemailer.createTransport({
 
 var schema = new password_validator();
 schema
-    .is().min(6)
-    .is().max(100)
-    .has().digits()
-    .has().not().spaces();
+.is().min(6)
+.is().max(100)
+.has().digits()
+.has().not().spaces();
 
 
 var con = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "password",
-    database: "cybernetics",
-});
+            host:"localhost",
+            user:"root",
+            password:"password",
+            database:"cybernetics",
+          });
 
-con.connect(function (err) {
+con.connect(function(err){
     if (err) throw err;
     console.log("Connected!");
 });
 
 app.set('view engine', 'ejs');
 
-//BODY PARSER CONFIG
 app.use(bodyParser.urlencoded({
     extended: true
 }));
@@ -52,67 +83,64 @@ app.get('/', function (req, res) {
 });
 
 
-app.post('/signup', function (req, res) {
+app.post('/signup', function(req, res){
     var firstName = req.body.firstName;
     var lastName = req.body.lastName;
     var email = req.body.email;
-    var password = req.body.password
+    var password = req.body.password;
     var hash_pass = bcrypt.hashSync(password, 10);
-    if (!verifyCredentials(firstName, lastName, email, password)) {
+    if(!verifyCredentials(firstName, lastName, email, password)){
         res.end("Invalid");
-    } else {
+    }else{
         var verification_token = randomstring.generate();
-        var url = "http://localhost:8080/verify_email/" + email + "/" + verification_token;
+        var url = "http://localhost:8080/verify_email/"+email+"/"+verification_token;
         var mailOptions = {
             from: from_email,
             to: email,
             subject: 'Verify your account',
-            html: 'To Verify your account Click <a href=' + url + '>here</a>'
+            html:'To Verify your account Click <a href='+url+'>here</a>'
         }
-        var query = "Insert into users(first_name, last_name, email, password, verification_token) values ('" + firstName + "','" + lastName + "','" + email + "','" + hash_pass + "','" + verification_token + "')";
-        con.query(query, function (err, result) {
-            if (err) {
+        con.query("Insert into users(first_name, last_name, email, password, verification_token) values (?,?,?,?,?)",[firstName, lastName, email, hash_pass, verification_token], function(err, result){
+            if(err){
                 res.end(JSON.stringify("Something went wrong in insert"));
-            } else {
-                transporter.sendMail(mailOptions, function (error, info) {
-                    if (error) {
+            }else{
+                transporter.sendMail(mailOptions, function(error, info){
+                    if(error){
                         console.log(error);
-                        query = "Delete from users where email='" + email + "'";
-                        con.query(query, function (derror, success_result) {
-                            if (derror) throw derror;
-                            if (success_result.affectedRows > 0) {
+                        con.query("Delete from users where email=?",[email], function(derror, success_result){
+                            if(derror) throw derror;
+                            if(success_result.affectedRows > 0){
                                 res.end(JSON.stringify("Something went wrong in mail"));
                             }
                         });
-                    } else {
-                        res.end(JSON.stringify("Mail sent successfully"));
+                    }else{
+                      res.end(JSON.stringify("Mail sent successfully"));  
                     }
                 });
             }
         });
-
+        
     }
 
 });
 
-app.post('/login', function (req, res) {
+app.post('/login', function(req, res){
     var email = req.body.email;
     var password = req.body.password;
 
-    var query = "Select first_name, last_name, email, password, verified from users where email='" + email + "'";
-    con.query(query, function (err, result) {
-        if (err) throw err;
-        if (!result || Object.keys(result).length == 0) {
+    con.query("Select first_name, last_name, email, password, verified from users where email=?",[email], function(err, result){
+        if(err) throw err;
+        if(!result || Object.keys(result).length == 0){
             res.end("Incorrect email");
-        } else {
-            if (result[0].verified == 1) {
-                if (bcrypt.compareSync(password, result[0].password)) {
+        }else{
+            if(result[0].verified == 1){
+                if(bcrypt.compareSync(password,result[0].password)){
                     res.end(JSON.stringify(result[0]));
-                } else {
+                }else{
                     res.end("Incorrect password");
                 }
             }
-            else {
+            else{
                 res.end("verify your email first");
             }
         }
@@ -120,19 +148,16 @@ app.post('/login', function (req, res) {
 });
 
 
-app.get('/verify_email/:email/:token', function (req, res) {
+app.get('/verify_email/:email/:token', function(req, res){
     var email = req.params.email;
     var token = req.params.token;
-    var query = "Update users set verified=1, verification_token=NULL where email='" + email + "' and verification_token='" + token + "'";
-    // console.log(query)
-    con.query(query, function (err, result) {
-        if (err) {
+    con.query("Update users set verified=1, verification_token=NULL where email=? and verification_token=?",[email, token], function(err, result){
+        if(err){
             res.end(err);
-        } else {
-            if (result.affectedRows > 0) {
-                query = "Select first_name, last_name, email from users where email='" + email + "'";
-                con.query(query, function (error, result) {
-                    if (error) throw error;
+        }else{
+            if(result.affectedRows > 0){
+                con.query("Select first_name, last_name, email from users where email=?",[email], function(error, result){
+                    if(error) throw error;
                     res.end(JSON.stringify(result));
                 });
             }
@@ -141,54 +166,50 @@ app.get('/verify_email/:email/:token', function (req, res) {
 });
 
 
-app.post('/password_reset_mail', function (req, res) {
+app.post('/password_reset_mail', function(req, res){
     var email = req.body.email;
     var token = randomstring.generate();
-    var url = "http://localhost:8080/password_reset_confirm/" + email + "/" + token;
+    var url = "http://localhost:8080/password_reset_confirm/"+email+"/"+token;
     var mailOptions = {
         from: from_email,
         to: email,
         subject: 'Reset your password',
-        html: 'To Verify Click <a href=' + url + '>here</a>'
+        html:'To Verify Click <a href='+url+'>here</a>'
     }
-    var query = "Update users set password_reset_token='" + token + "' where email='" + email + "'";
-    con.query(query, function (err, result) {
-        if (err) {
-            res.end("Something went wrong");
-        } else {
-            if (result.affectedRows > 0) {
-                transporter.sendMail(mailOptions, function (error, info) {
-                    if (error) {
-                        query = "Update users set password_reset_token=NULL where email='" + email + "'";
-                        con.query(query, function (derror, success_result) {
-                            if (derror) throw derror;
-                            if (success_result.affectedRows > 0) {
-                                res.end("Something went wrong");
-                            }
-                        });
-                    } else {
-                        res.end("Mail sent successfully");
-                    }
-                });
+        con.query("Update users set password_reset_token=? where email=?",[token, email], function(err, result){
+            if(err){
+                res.end("Something went wrong");
+            }else{
+                if(result.affectedRows > 0){
+                    transporter.sendMail(mailOptions, function(error, info){
+                        if(error){
+                            con.query("Update users set password_reset_token=NULL where email=?",[email], function(derror, success_result){
+                                if(derror) throw derror;
+                                if(success_result.affectedRows > 0){
+                                    res.end("Something went wrong");    
+                                }
+                            });
+                        }else{
+                            res.end("Mail sent successfully");
+                        }
+                    });
+                }
             }
-        }
-    });
+        });
 
 });
 
-app.get('/password_reset_confirm/:email/:token', function (req, res) {
+app.get('/password_reset_confirm/:email/:token', function(req, res){
     var email = req.params.email;
     var token = req.params.token;
-
-    var query = "Update users set password_reset_token=NULL where email='" + email + "' and password_reset_token='" + token + "'";
-    con.query(query, function (err, result) {
-        if (err) {
+    
+    con.query("Update users set password_reset_token=NULL where email=? and password_reset_token=?",[email, token], function(err, result){
+        if(err){
             res.end("Something went wrong");
-        } else {
-            if (result.affectedRows > 0) {
-                query = "Select first_name, last_name, email from users where email='" + email + "'";
-                con.query(query, function (error, result) {
-                    if (error) throw error;
+        }else{
+            if(result.affectedRows > 0){
+                con.query("Select first_name, last_name, email from users where email=?",[email], function(error, result){
+                    if(error) throw error;
                     res.end(JSON.stringify(result));
                 });
             }
@@ -197,50 +218,83 @@ app.get('/password_reset_confirm/:email/:token', function (req, res) {
 
 });
 
-app.post('/reset_password', function (req, res) {
+app.post('/reset_password',function(req, res){
     var email = req.body.email;
     var password = req.body.password;
     var repass = req.body.re_pass;
-    if (password == repass) {
-        if (!schema.validate(password)) {
+    if(password == repass){
+        if(!schema.validate(password)){
             res.end("Password too weak");
-        } else {
+        }else{
             var hash_pass = bcrypt.hashSync(password, 10);
-            var query = "Update users set password='" + hash_pass + "' where email='" + email + "'";
-            con.query(query, function (error, result) {
-                if (error) {
+            con.query("Update users set password=? where email=?",[hash_pass, email], function(error, result){
+                if(error){
                     res.end("Something went wrong");
-                } else {
-                    if (result.affectedRows > 0) {
+                }else{
+                    if(result.affectedRows > 0){
                         res.end("Password changed successfully");
-                    } else {
+                    }else{
                         res.end("Email not matched");
                     }
                 }
             });
         }
-    } else {
+    }else{
         res.end("Password does not match");
     }
 });
 
 
-function verifyCredentials(firstName, lastName, email, password) {
-    if (!firstName || !lastName || !email || !password) {
+function verifyCredentials(firstName, lastName, email, password){
+    if(!firstName || !lastName || !email || !password ){
         return false;
     }
-    if (!/^[a-z]+$/i.test(firstName) || !/^[a-z]+$/i.test(lastName)) {
+    if(!/^[a-z]+$/i.test(firstName) || !/^[a-z]+$/i.test(lastName)){
         return false;
     }
-    if (!email_validator.validate(email)) {
+    if(!email_validator.validate(email)){
         return false;
     }
-    if (!schema.validate(password)) {
+    if(!schema.validate(password)){
         return false;
     }
     return true;
 }
 
+function formatDate(date) {
+    var d = new Date(date),
+        month = '' + (d.getMonth() + 1),
+        day = '' + d.getDate(),
+        year = d.getFullYear();
+
+    if (month.length < 2) month = '0' + month;
+    if (day.length < 2) day = '0' + day;
+
+    return [year, month, day].join('-');
+}
+
+
+app.post("/project_score",async function(req, res){
+    var project = req.body.project_name;
+    var from_date = req.body.from_date;
+    var to_date = req.body.to_date
+    var dates = [];
+    var record_Object = {};
+    var records = [];
+    for (const date of datesBetween(new Date(from_date), new Date(to_date))) {
+        dates.push(formatDate(date));
+    }
+    await Twitter.find({project_name: project, date: {$in: dates}}, function(err, data){
+        if(err){
+            res.end(error);
+        }else{
+            records = data;
+        }
+    });
+    console.log(records)
+    record_Object['twitter'] = records;
+    res.end(JSON.stringify(record_Object));
+});
 
 
 app.post('/add_project_to_database', function (req, res) {
