@@ -348,26 +348,26 @@ app.post('/add_project_to_database', function (req, res) {
     var projectName = req.body.project_name;
     console.log(projectName);
     //Checking if project exists
-    var query_search_project = "Select project_name from projects where project_name = '" + projectName + "'";
-    con.query(query_search_project, function (error, result) {
+    // var query_search_project = "Select project_name from projects where project_name = '" + projectName + "'";
+    con.query("Select project_name from projects where project_name=?",[projectName], function (error, result) {
         if (error) {
             console.log('PROJECT NOT FOUND ! ');
 
             //INSERTING PROJECT
 
-            var query = "Insert into projects(project_name) values ('" + projectName + "')";
+            // var query = "Insert into projects(project_name) values ('" + projectName + "')";
 
-            con.query(query, function (err, result) {
+            con.query("Insert into projects(project_name) values (?)",[projectName], function (err, result) {
                 if (err) {
-                    var query_create = "CREATE TABLE IF NOT EXISTS projects (project_name VARCHAR(50), ID int NOT NULL AUTO_INCREMENT , PRIMARY KEY (ID))";
-                    con.query(query_create, function (error_create, res_create) {
+                    // var query_create = "CREATE TABLE IF NOT EXISTS projects (project_name VARCHAR(50), ID int NOT NULL AUTO_INCREMENT , PRIMARY KEY (ID))";
+                    con.query("CREATE TABLE IF NOT EXISTS projects (project_name VARCHAR(50), ID int NOT NULL AUTO_INCREMENT , PRIMARY KEY (ID))", function (error_create, res_create) {
                         if (error_create) {
                             console.log(error_create);
                             return res.send(error_create);
                         }
                         else {
                             console.log("TABlE CREATED");
-                            con.query(query, function (error_insert, response) {
+                            con.query("Insert into projects(project_name) values (?)",[projectName], function (error_insert, response) {
                                 if (error_insert) {
                                     console.log(error_insert);
                                     return res.send(error_insert);
@@ -389,8 +389,8 @@ app.post('/add_project_to_database', function (req, res) {
         else {
             console.log(result);
             if (!result.length) {
-                var query_insert = "Insert into projects(project_name) values ('" + projectName + "')";
-                con.query(query_insert, function (error_insert, response) {
+                // var query_insert = "Insert into projects(project_name) values ('" + projectName + "')";
+                con.query("Insert into projects(project_name) values (?)",[projectName], function (error_insert, response) {
                     if (error_insert) {
                         console.log(error_insert);
                         return res.send(error_insert);
@@ -414,9 +414,9 @@ app.get('/search_project/:project_name', function (req, res) {
     console.log(req.params.project_name);
     var projectName = req.params.project_name;
     //CHECK IF PROJECT EXISTS
-    var query_search_project = "Select * from projects where project_name = '" + projectName + "'";
+    // var query_search_project = "Select * from projects where project_name = '" + projectName + "'";
 
-    con.query(query_search_project, function (error, result) {
+    con.query("Select * from projects where project_name=?",[projectName], function (error, result) {
         if (error) {
             console.log('PROJECT NOT FOUND ! ');
             return res.send('Project Not Found!');
@@ -443,8 +443,8 @@ app.post('/add_project_to_user', function (req, res) {
 
     console.log({ projectId, userEmail });
 
-    var query_search_project = "Select * from projects where ID = '" + projectId + "'";
-    con.query(query_search_project, function (error, result) {
+    // var query_search_project = "Select * from projects where ID = '" + projectId + "'";
+    con.query("Select * from projects where ID=?",[projectId], function (error, result) {
         if (error) {
             console.log("Project NOT Found BY that ID");
             return res.send("Project NOT Found BY that ID");
@@ -460,9 +460,9 @@ app.post('/add_project_to_user', function (req, res) {
                 var userProjectsString;
                 var userProjectsStringArray = [];
                 var userProjectsIntArray = [];
-                var query = "Select projects from users where email = '" + userEmail + "'";
+                // var query = "Select projects from users where email = '" + userEmail + "'";
 
-                con.query(query, function (err, result) {
+                con.query("Select projects from users where email=?",[userEmail], function (err, result) {
                     if (err) {
                         console.log(err);
                         return res.send(err);
@@ -489,9 +489,9 @@ app.post('/add_project_to_user', function (req, res) {
                                 }
                                 else {
                                     userProjectsString += "," + projectId;
-                                    var update_query = "UPDATE users SET projects ='" + userProjectsString + "' Where email =" + "'" + userEmail + "'";
-                                    console.log(update_query);
-                                    con.query(update_query, function (error_update, res_update) {
+                                    // var update_query = "UPDATE users SET projects ='" + userProjectsString + "' Where email =" + "'" + userEmail + "'";
+                                    // console.log(update_query);
+                                    con.query("UPDATE users SET projects=? Where email=?",[userProjectsString,userEmail], function (error_update, res_update) {
                                         if (error_update) {
                                             console.log('FAILED TO UPDATE!');
                                             return res.send('UPDATE FAILED!');
@@ -505,9 +505,9 @@ app.post('/add_project_to_user', function (req, res) {
                             }
                             else {
                                 console.log('User has no PROJECT, FIELD NULL for user');
-                                var update_query = "UPDATE users SET projects ='" + projectId + "' Where email =" + "'" + userEmail + "'";
-                                console.log(update_query);
-                                con.query(update_query, function (error_update, res_update) {
+                                // var update_query = "UPDATE users SET projects ='" + projectId + "' Where email =" + "'" + userEmail + "'";
+                                // console.log(update_query);
+                                con.query("UPDATE users SET projects=? Where email=?",[projectId,userEmail], function (error_update, res_update) {
                                     if (error_update) {
                                         console.log('FAILED TO UPDATE!');
                                         return res.send('UPDATE FAILED!');
@@ -536,14 +536,14 @@ app.post('/remove_project_from_user', function (req, res) {
     var userProjectsString;
     var userProjectsStringArray = [];
     var userProjectsIntArray = [];
-    var query = "Select projects from users where email = '" + userEmail + "'";
+    // var query = "Select projects from users where email = '" + userEmail + "'";
     if (projectId.match(/[a-z]/i)) {
         // alphabet letters found
         console.log("Invalid Project Id");
         return res.send("Invalid Project Id");
     }
 
-    con.query(query, function (err, result) {
+    con.query("Select projects from users where email=?",[userEmail], function (err, result) {
         if (err) {
             console.log(err);
             return res.send(err);
@@ -580,10 +580,10 @@ app.post('/remove_project_from_user', function (req, res) {
                         updateProjectsString = updateProjectsString.slice(0, -1);
                         console.log("UPDATE PROJECT STRING", updateProjectsString);
 
-                        var update_query = "UPDATE users SET projects ='" + updateProjectsString + "' Where email =" + "'" + userEmail + "'";
+                        // var update_query = "UPDATE users SET projects ='" + updateProjectsString + "' Where email =" + "'" + userEmail + "'";
 
-                        console.log(update_query);
-                        con.query(update_query, function (error_update, res_update) {
+                        // console.log(update_query);
+                        con.query("UPDATE users SET projects=? Where email=?",[updateProjectsString,userEmail], function (error_update, res_update) {
                             if (error_update) {
                                 console.log('FAILED TO Delete Project!');
                                 return res.send('Delete Project FAILED!');
