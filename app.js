@@ -443,6 +443,11 @@ app.post('/add_project_to_user', function (req, res) {
 
     console.log({ projectId, userEmail });
 
+    if (projectId.match(/[a-z]/i)) {
+        // alphabet letters found
+        console.log("Invalid Project Id");
+        return res.send("Invalid Project Id");
+    }  
     // var query_search_project = "Select * from projects where ID = '" + projectId + "'";
     con.query("Select * from projects where ID=?",[projectId], function (error, result) {
         if (error) {
