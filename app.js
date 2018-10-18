@@ -32,14 +32,17 @@ var redditSchema = new Schema({
     project_name: String
 });
 
-////github schema
-// var githubSchema = mongoose.Schema({
+//github schema
+var githubSchema = new Schema({
+    date:String,
+    project_name:String,
+    data: Schema.Types.Mixed
+});
 
-// });
 
 var Twitter = mongoose.model('twitter_projects_report', twitterSchema);
 var Reddit = mongoose.model('reddit_projects_report', redditSchema);
-// var Github = mongoose.model('github_projects_report',githubSchema);
+var Github = mongoose.model('github_projects_report',githubSchema);
 
 var from_email = '';
 var from_pass = '';
@@ -274,7 +277,7 @@ function formatDate(date) {
 }
 
 
-app.post("/project_score",async function(req, res){
+app.post("/twitter_project_score",async function(req, res){
     var project = req.body.project_name;
     var from_date = req.body.from_date;
     var to_date = req.body.to_date
@@ -297,6 +300,27 @@ app.post("/project_score",async function(req, res){
 });
 
 
+app.post("/github_project_score",async function(req, res){
+    var project = req.body.project_name;
+    var from_date = req.body.from_date;
+    var to_date = req.body.to_date
+    var dates = [];
+    var record_Object = {};
+    var records = [];
+    for (const date of datesBetween(new Date(from_date), new Date(to_date))) {
+        dates.push(formatDate(date));
+    }
+    await Github.find({project_name: project, date: {$in: dates}}, function(err, data){
+        if(err){
+            res.end(error);
+        }else{
+            records = data;
+        }
+    });
+    console.log(records)
+    record_Object['github'] = records;
+    res.end(JSON.stringify(record_Object));
+});
 app.post('/add_project_to_database', function (req, res) {
     var projectName = req.body.project_name;
     console.log(projectName);
