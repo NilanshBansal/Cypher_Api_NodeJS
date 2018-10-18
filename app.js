@@ -289,7 +289,7 @@ app.post("/twitter_project_score",async function(req, res){
     }
     await Twitter.find({project_name: project, date: {$in: dates}}, function(err, data){
         if(err){
-            res.end(error);
+            res.end(err);
         }else{
             records = data;
         }
@@ -299,6 +299,28 @@ app.post("/twitter_project_score",async function(req, res){
     res.end(JSON.stringify(record_Object));
 });
 
+app.post("/reddit_project_score", async function(req,res){
+    var project = req.body.project_name;
+    var from_date = req.body.from_date;
+    var to_date = req.body.to_date
+    var dates = [];
+    var record_Object = {};
+    var records = [];
+    for (const date of datesBetween(new Date(from_date), new Date(to_date))) {
+        dates.push(formatDate(date));
+    }
+    await Reddit.find({project_name: project, date: {$in: dates}},function(err,data){
+        if(err){
+            res.send(err);
+        }
+        else{
+            records = data;
+        }
+    });
+    console.log(records)
+    record_Object['reddit'] = records;
+    res.end(JSON.stringify(record_Object));
+});
 
 app.post("/github_project_score",async function(req, res){
     var project = req.body.project_name;
@@ -321,6 +343,7 @@ app.post("/github_project_score",async function(req, res){
     record_Object['github'] = records;
     res.end(JSON.stringify(record_Object));
 });
+
 app.post('/add_project_to_database', function (req, res) {
     var projectName = req.body.project_name;
     console.log(projectName);
