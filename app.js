@@ -451,21 +451,17 @@ app.post('/get_user_projects',function(req,res){
             else {
                 var userProjectsString;
                 var userProjectsStringArray = [];
-                // var userProjectsIntArray = [];
-                var response_return_projects = []
-                var response_return_project_obj = {}
-                console.log("RESULT ", result[0]['projects']);
                 if (result[0]['projects']) {
                     userProjectsString = result[0]['projects'];
                     userProjectsStringArray = userProjectsString.split(",");          
-                    // userProjectsStringArray.forEach(function (projectId) {
-                    //     userProjectsIntArray.push(parseInt(projectId));
-                    // });
-                    // console.log(userProjectsIntArray);
+                    var projects_count = userProjectsStringArray.length;
+                    if(projects_count<5){
+                        for (var i=projects_count;i<5;i++){
+                            userProjectsStringArray[i] = null;
+                        }
+                    }
 
-                    console.log(userProjectsStringArray);
-                    userProjectsStringArray.forEach(function(projectId){
-                        con.query('Select * from projects where ID=?',[projectId],function(err_search_project,res_search_project){
+                    con.query('Select * from projects where ID in (?,?,?,?,?)',[userProjectsStringArray[0],userProjectsStringArray[1],userProjectsStringArray[2],userProjectsStringArray[3],userProjectsStringArray[4]],function(err_search_project,res_search_project){
                             if(err_search_project){
                                 console.log(err_search_project);
                                 return res.end('Error Searching ');
@@ -476,18 +472,11 @@ app.post('/get_user_projects',function(req,res){
                                     return res.send('Error!');
                                 }
                                 else{
-                                    console.log("HERE: ",res_search_project[0]);
-                                    response_return_project_obj = {
-                                        "project_name":res_search_project[0]['project_name'],
-                                        "project_id":res_search_project[0]['ID']
-                                    };
-                                    //EROR TO CORRECT
-                                    response_return_projects.push(response_return_project_obj);
+                                    console.log(res_search_project);
+                                    return res.send(res_search_project);
                                 }
                             }
                         });
-                    });
-                    console.log("RESPONSE BACKK: ",response_return_projects);
                 }
                 else{
                     console.log('User has no PROJECT, FIELD NULL for user');
