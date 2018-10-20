@@ -86,6 +86,8 @@ app.get('/', function (req, res) {
 });
 
 
+response_json = {}
+
 app.post('/signup', function(req, res){
     var firstName = req.body.firstName;
     var lastName = req.body.lastName;
@@ -93,7 +95,11 @@ app.post('/signup', function(req, res){
     var password = req.body.password;
     var hash_pass = bcrypt.hashSync(password, 10);
     if(!verifyCredentials(firstName, lastName, email, password)){
-        res.end("Invalid");
+        response_json['response_code'] = null;
+        response_json['response_type'] = "failure";
+        response_json['content'] = null;
+        response_json['info'] = "Invalid Credentials";
+        res.end(JSON.stringify(response_json));
     }else{
         var verification_token = randomstring.generate();
         var url = "http://localhost:8080/verify_email/"+email+"/"+verification_token;
@@ -105,19 +111,37 @@ app.post('/signup', function(req, res){
         }
         con.query("Insert into users(first_name, last_name, email, password, verification_token) values (?,?,?,?,?)",[firstName, lastName, email, hash_pass, verification_token], function(err, result){
             if(err){
-                res.end(JSON.stringify("Something went wrong in insert"));
+                response_json['response_code'] = null;
+                response_json['response_type'] = "failure";
+                response_json['content'] = null;
+                response_json['info'] = err;
+                res.end(JSON.stringify(response_json));
             }else{
                 transporter.sendMail(mailOptions, function(error, info){
                     if(error){
                         console.log(error);
                         con.query("Delete from users where email=?",[email], function(derror, success_result){
-                            if(derror) throw derror;
+                            if(derror){
+                                response_json['response_code'] = null;
+                                response_json['response_type'] = "failure";
+                                response_json['content'] = null;
+                                response_json['info'] = derror;
+                                res.end(JSON.stringify(response_json));
+                            };
                             if(success_result.affectedRows > 0){
-                                res.end(JSON.stringify("Something went wrong in mail"));
+                                response_json['response_code'] = null;
+                                response_json['response_type'] = "failure";
+                                response_json['content'] = null;
+                                response_json['info'] = "Error in Sending mail";
+                                res.end(JSON.stringify(response_json));
                             }
                         });
                     }else{
-                      res.end(JSON.stringify("Mail sent successfully"));  
+                        response_json['response_code'] = null;
+                        response_json['response_type'] = "success";
+                        response_json['content'] = null;
+                        response_json['info'] = "Mail send successfully";
+                        res.end(JSON.stringify(response_json));  
                     }
                 });
             }
@@ -134,17 +158,33 @@ app.post('/login', function(req, res){
     con.query("Select first_name, last_name, email, password, verified from users where email=?",[email], function(err, result){
         if(err) throw err;
         if(!result || Object.keys(result).length == 0){
-            res.end("Incorrect email");
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = "Incorrect Email";
+            res.end(JSON.stringify(response_json));
         }else{
             if(result[0].verified == 1){
                 if(bcrypt.compareSync(password,result[0].password)){
-                    res.end(JSON.stringify(result[0]));
+                    response_json['response_code'] = null;
+                    response_json['response_type'] = "success";
+                    response_json['content'] = result[0];
+                    response_json['info'] = "login successfully";
+                    res.end(JSON.stringify(response_json));
                 }else{
-                    res.end("Incorrect password");
+                    response_json['response_code'] = null;
+                    response_json['response_type'] = "failure";
+                    response_json['content'] = null;
+                    response_json['info'] = "Incorrect Password";
+                    res.end(JSON.stringify(response_json));
                 }
             }
             else{
-                res.end("verify your email first");
+                response_json['response_code'] = null;
+                response_json['response_type'] = "failure";
+                response_json['content'] = null;
+                response_json['info'] = "Verify your email first";
+                res.end(JSON.stringify(response_json));
             }
         }
     });
@@ -156,12 +196,27 @@ app.get('/verify_email/:email/:token', function(req, res){
     var token = req.params.token;
     con.query("Update users set verified=1, verification_token=NULL where email=? and verification_token=?",[email, token], function(err, result){
         if(err){
-            res.end(err);
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = err;
+            res.end(JSON.stringify(response_json));
         }else{
             if(result.affectedRows > 0){
                 con.query("Select first_name, last_name, email from users where email=?",[email], function(error, result){
-                    if(error) throw error;
-                    res.end(JSON.stringify(result));
+                    if(error) {
+                        response_json['response_code'] = null;
+                        response_json['response_type'] = "failure";
+                        response_json['content'] = null;
+                        response_json['info'] = error;
+                        res.end(JSON.stringify(response_json));
+                    }else{
+                        response_json['response_code'] = null;
+                        response_json['response_type'] = "success";
+                        response_json['content'] = result;
+                        response_json['info'] = "Verified Email";
+                        res.end(JSON.stringify(response_json));
+                    }
                 });
             }
         }
@@ -181,19 +236,37 @@ app.post('/password_reset_mail', function(req, res){
     }
         con.query("Update users set password_reset_token=? where email=?",[token, email], function(err, result){
             if(err){
-                res.end("Something went wrong");
+                response_json['response_code'] = null;
+                response_json['response_type'] = "failure";
+                response_json['content'] = null;
+                response_json['info'] = err;
+                res.end(JSON.stringify(response_json));
             }else{
                 if(result.affectedRows > 0){
                     transporter.sendMail(mailOptions, function(error, info){
                         if(error){
                             con.query("Update users set password_reset_token=NULL where email=?",[email], function(derror, success_result){
-                                if(derror) throw derror;
+                                if(derror){
+                                    response_json['response_code'] = null;
+                                    response_json['response_type'] = "failure";
+                                    response_json['content'] = null;
+                                    response_json['info'] = derror;
+                                    res.end(JSON.stringify(response_json));
+                                }
                                 if(success_result.affectedRows > 0){
-                                    res.end("Something went wrong");    
+                                    response_json['response_code'] = null;
+                                    response_json['response_type'] = "failure";
+                                    response_json['content'] = null;
+                                    response_json['info'] = "Something went wrong";
+                                    res.end(JSON.stringify(response_json));
                                 }
                             });
                         }else{
-                            res.end("Mail sent successfully");
+                            response_json['response_code'] = null;
+                            response_json['response_type'] = "success";
+                            response_json['content'] = null;
+                            response_json['info'] = "Mail sent successfully";
+                            res.end(JSON.stringify(response_json));
                         }
                     });
                 }
@@ -208,12 +281,27 @@ app.get('/password_reset_confirm/:email/:token', function(req, res){
     
     con.query("Update users set password_reset_token=NULL where email=? and password_reset_token=?",[email, token], function(err, result){
         if(err){
-            res.end("Something went wrong");
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = err;
+            res.end(JSON.stringify(response_json));
         }else{
             if(result.affectedRows > 0){
                 con.query("Select first_name, last_name, email from users where email=?",[email], function(error, result){
-                    if(error) throw error;
-                    res.end(JSON.stringify(result));
+                    if(error){
+                        response_json['response_code'] = null;
+                        response_json['response_type'] = "failure";
+                        response_json['content'] = null;
+                        response_json['info'] = error;
+                        res.end(JSON.stringify(response_json));
+                    }else{
+                        response_json['response_code'] = null;
+                        response_json['response_type'] = "success";
+                        response_json['content'] = result;
+                        response_json['info'] = "verification token success";
+                        res.end(JSON.stringify(response_json));
+                    }
                 });
             }
         }
@@ -227,23 +315,43 @@ app.post('/reset_password',function(req, res){
     var repass = req.body.re_pass;
     if(password == repass){
         if(!schema.validate(password)){
-            res.end("Password too weak");
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = "Password is too weak";
+            res.end(JSON.stringify(response_json));
         }else{
             var hash_pass = bcrypt.hashSync(password, 10);
             con.query("Update users set password=? where email=?",[hash_pass, email], function(error, result){
                 if(error){
-                    res.end("Something went wrong");
+                    response_json['response_code'] = null;
+                    response_json['response_type'] = "failure";
+                    response_json['content'] = null;
+                    response_json['info'] = error;
+                    res.end(JSON.stringify(response_json));
                 }else{
                     if(result.affectedRows > 0){
-                        res.end("Password changed successfully");
+                        response_json['response_code'] = null;
+                        response_json['response_type'] = "success";
+                        response_json['content'] = null;
+                        response_json['info'] = "Password changed successfully";
+                        res.end(JSON.stringify(response_json));
                     }else{
-                        res.end("Email not matched");
+                        response_json['response_code'] = null;
+                        response_json['response_type'] = "failure";
+                        response_json['content'] = null;
+                        response_json['info'] = "Email not matched";
+                        res.end(JSON.stringify(response_json));
                     }
                 }
             });
         }
     }else{
-        res.end("Password does not match");
+        response_json['response_code'] = null;
+        response_json['response_type'] = "failure";
+        response_json['content'] = null;
+        response_json['info'] = "Password does not match";
+        res.end(JSON.stringify(response_json));
     }
 });
 
@@ -289,14 +397,51 @@ app.post("/twitter_project_score",async function(req, res){
     }
     await Twitter.find({project_name: project, date: {$in: dates}}, function(err, data){
         if(err){
-            res.end(err);
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = err;
+            res.end(JSON.stringify(response_json));
         }else{
             records = data;
         }
     });
-    console.log(records)
     record_Object['twitter'] = records;
-    res.end(JSON.stringify(record_Object));
+    response_json['response_code'] = null;
+    response_json['response_type'] = "success";
+    response_json['content'] = record_Object;
+    response_json['info'] = "success";
+    res.end(JSON.stringify(response_json));
+});
+
+
+app.post("/github_project_score",async function(req, res){
+    var project = req.body.project_name;
+    var from_date = req.body.from_date;
+    var to_date = req.body.to_date
+    var dates = [];
+    var record_Object = {};
+    var records = [];
+    for (const date of datesBetween(new Date(from_date), new Date(to_date))) {
+        dates.push(formatDate(date));
+    }
+    await Github.find({project_name: project, date: {$in: dates}}, function(err, data){
+        if(err){
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = err;
+            res.end(JSON.stringify(response_json));
+        }else{
+            records = data;
+        }
+    });
+    record_Object['github'] = records;
+    response_json['response_code'] = null;
+    response_json['response_type'] = "success";
+    response_json['content'] = record_Object;
+    response_json['info'] = "success";
+    res.end(JSON.stringify(response_json));
 });
 
 app.post("/reddit_project_score", async function(req,res){
