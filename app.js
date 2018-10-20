@@ -456,7 +456,11 @@ app.post("/reddit_project_score", async function(req,res){
     }
     await Reddit.find({project_name: project, date: {$in: dates}},function(err,data){
         if(err){
-            res.send(err);
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = err;
+            return res.end(JSON.stringify(response_json));
         }
         else{
             records = data;
@@ -464,29 +468,11 @@ app.post("/reddit_project_score", async function(req,res){
     });
     console.log(records)
     record_Object['reddit'] = records;
-    res.end(JSON.stringify(record_Object));
-});
-
-app.post("/github_project_score",async function(req, res){
-    var project = req.body.project_name;
-    var from_date = req.body.from_date;
-    var to_date = req.body.to_date
-    var dates = [];
-    var record_Object = {};
-    var records = [];
-    for (const date of datesBetween(new Date(from_date), new Date(to_date))) {
-        dates.push(formatDate(date));
-    }
-    await Github.find({project_name: project, date: {$in: dates}}, function(err, data){
-        if(err){
-            res.end(error);
-        }else{
-            records = data;
-        }
-    });
-    console.log(records)
-    record_Object['github'] = records;
-    res.end(JSON.stringify(record_Object));
+    response_json['response_code'] = null;
+    response_json['response_type'] = "success";
+    response_json['content'] = record_Object;
+    response_json['info'] = "success";
+    return res.end(JSON.stringify(response_json));
 });
 
 app.post('/add_project_to_database', function (req, res) {
@@ -508,24 +494,44 @@ app.post('/add_project_to_database', function (req, res) {
                     con.query("CREATE TABLE IF NOT EXISTS projects (project_name VARCHAR(50), ID int NOT NULL AUTO_INCREMENT , PRIMARY KEY (ID))", function (error_create, res_create) {
                         if (error_create) {
                             console.log(error_create);
-                            return res.send(error_create);
+                            response_json['response_code'] = null;
+                            response_json['response_type'] = "failure";
+                            response_json['content'] = null;
+                            response_json['info'] = error_create;
+                            return res.end(JSON.stringify(response_json));
+                            
                         }
                         else {
                             console.log("TABlE CREATED");
                             con.query("Insert into projects(project_name) values (?)",[projectName], function (error_insert, response) {
                                 if (error_insert) {
                                     console.log(error_insert);
-                                    return res.send(error_insert);
+                                    response_json['response_code'] = null;
+                                    response_json['response_type'] = "failure";
+                                    response_json['content'] = null;
+                                    response_json['info'] = error_insert;
+                                    return res.end(JSON.stringify(response_json));
+                                    // return res.send(error_insert);
                                 }
                                 else {
                                     console.log("RECORD INSERTED SUCCESSFULLY !");
-                                    return res.send("RECORD INSERTED SUCCESSFULLY !");
+                                    response_json['response_code'] = null;
+                                    response_json['response_type'] = "success";
+                                    response_json['content'] = null;
+                                    response_json['info'] = "Record Inserted successfully!";
+                                    return res.end(JSON.stringify(response_json));
+                                    // return res.send("RECORD INSERTED SUCCESSFULLY !");
                                 }
                             });
                         }
                     });
                 } else {
-                    return res.send("Successfully Inserted Project");
+                    response_json['response_code'] = null;
+                    response_json['response_type'] = "success";
+                    response_json['content'] = null;
+                    response_json['info'] = "Record Inserted successfully!";
+                    return res.end(JSON.stringify(response_json));
+                    // return res.send("Successfully Inserted Project");
                 }
             });
 
@@ -537,17 +543,32 @@ app.post('/add_project_to_database', function (req, res) {
                 // var query_insert = "Insert into projects(project_name) values ('" + projectName + "')";
                 con.query("Insert into projects(project_name) values (?)",[projectName], function (error_insert, response) {
                     if (error_insert) {
-                        console.log(error_insert);
-                        return res.send(error_insert);
+                        response_json['response_code'] = null;
+                        response_json['response_type'] = "failure";
+                        response_json['content'] = null;
+                        response_json['info'] = error_insert;
+                        return res.end(JSON.stringify(response_json));
+                        // console.log(error_insert);
+                        // return res.send(error_insert);
                     }
                     else {
                         console.log("RECORD INSERTED SUCCESSFULLY !");
-                        return res.send("RECORD INSERTED SUCCESSFULLY !");
+                        // return res.send("RECORD INSERTED SUCCESSFULLY !");
+                        response_json['response_code'] = null;
+                        response_json['response_type'] = "success";
+                        response_json['content'] = null;
+                        response_json['info'] = "Record Inserted successfully!";
+                        return res.end(JSON.stringify(response_json));
                     }
                 });
             }
             else {
-                return res.send('PROJECT Already EXISTS');
+                response_json['response_code'] = null;
+                response_json['response_type'] = "success";
+                response_json['content'] = null;
+                response_json['info'] = "PROJECT Already EXISTS !";
+                return res.end(JSON.stringify(response_json));
+                // return res.send('PROJECT Already EXISTS');
             }
 
         }
@@ -564,18 +585,33 @@ app.get('/search_project/:project_name', function (req, res) {
     con.query("Select * from projects where project_name=?",[projectName], function (error, result) {
         if (error) {
             console.log('PROJECT NOT FOUND ! ');
-            return res.send('Project Not Found!');
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = error;
+            return res.end(JSON.stringify(response_json));
+            // return res.send('Project Not Found!');
         }
         else {
 
             if (!result.length) {
                 console.log("Project Does not Exist In table!");
-                return res.send("NO such project Exists!");
+                response_json['response_code'] = null;
+                response_json['response_type'] = "failure";
+                response_json['content'] = null;
+                response_json['info'] = "No such Project EXISTS !";
+                return res.end(JSON.stringify(response_json));
+                // return res.send("NO such project Exists!");
             }
             else {
                 console.log("RESULT: ", result);
                 console.log(result[0]['ID'], result[0]['project_name']);
-                return res.send('PROJECT EXISTS');
+                response_json['response_code'] = null;
+                response_json['response_type'] = "success";
+                response_json['content'] = result[0];
+                response_json['info'] = "PROJECT Found !";
+                return res.end(JSON.stringify(response_json));
+                // return res.send('PROJECT EXISTS');
             }
         }
     });
@@ -586,12 +622,22 @@ app.post('/get_user_projects',function(req,res){
     con.query("Select projects from users where email=?",[userEmail],function(err,result){
         if(err){
             console.log(err);
-            return res.send(err);
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = err;
+            return res.end(JSON.stringify(response_json));
+            // return res.send(err);
         }
         else{
             if (!result.length) {
                 console.log('No user by that email exists !');
-                return res.send('NO user by that email exists !');
+                response_json['response_code'] = null;
+                response_json['response_type'] = "failure";
+                response_json['content'] = null;
+                response_json['info'] = "NO user by that email exists !";
+                return res.end(JSON.stringify(response_json));
+                // return res.send('NO user by that email exists !');
             }
             else {
                 var userProjectsString;
@@ -609,23 +655,43 @@ app.post('/get_user_projects',function(req,res){
                     con.query('Select * from projects where ID in (?,?,?,?,?)',[userProjectsStringArray[0],userProjectsStringArray[1],userProjectsStringArray[2],userProjectsStringArray[3],userProjectsStringArray[4]],function(err_search_project,res_search_project){
                             if(err_search_project){
                                 console.log(err_search_project);
-                                return res.end('Error Searching ');
+                                response_json['response_code'] = null;
+                                response_json['response_type'] = "failure";
+                                response_json['content'] = null;
+                                response_json['info'] = err_search_project;
+                                return res.end(JSON.stringify(response_json));
+                                // return res.end('Error Searching ');
                             }
                             else{
                                 if(!res_search_project.length){
                                     console.log("Some error !");
-                                    return res.send('Error!');
+                                    response_json['response_code'] = null;
+                                    response_json['response_type'] = "failure";
+                                    response_json['content'] = null;
+                                    response_json['info'] = "ERROR !";
+                                    return res.end(JSON.stringify(response_json));
+                                    // return res.send('Error!');
                                 }
                                 else{
                                     console.log(res_search_project);
-                                    return res.send(res_search_project);
+                                    response_json['response_code'] = null;
+                                    response_json['response_type'] = "success";
+                                    response_json['content'] = res_search_project;
+                                    response_json['info'] = "User Projects !";
+                                    return res.end(JSON.stringify(response_json));
+                                    // return res.send(res_search_project);
                                 }
                             }
                         });
                 }
                 else{
                     console.log('User has no PROJECT, FIELD NULL for user');
-                    return res.end('User has no Project Added!');
+                    response_json['response_code'] = null;
+                    response_json['response_type'] = "success";
+                    response_json['content'] = null;
+                    response_json['info'] = "User has no Project Added!";
+                    return res.end(JSON.stringify(response_json));
+                    // return res.end('User has no Project Added!');
                 }
             }
         }
@@ -641,18 +707,35 @@ app.post('/add_project_to_user', function (req, res) {
     if (projectId.match(/[a-z]/i)) {
         // alphabet letters found
         console.log("Invalid Project Id");
-        return res.send("Invalid Project Id");
+        response_json['response_code'] = null;
+        response_json['response_type'] = "failure";
+        response_json['content'] = null;
+        response_json['info'] = "Invalid Project Id !";
+        return res.end(JSON.stringify(response_json));
+
+        // return res.send("Invalid Project Id");
     }  
     // var query_search_project = "Select * from projects where ID = '" + projectId + "'";
     con.query("Select * from projects where ID=?",[projectId], function (error, result) {
         if (error) {
             console.log("Project NOT Found BY that ID");
-            return res.send("Project NOT Found BY that ID");
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = "NO such project Exists!";
+            return res.end(JSON.stringify(response_json));
+    
+            // return res.send("Project NOT Found BY that ID");
         }
         else {
             if (!result.length) {
                 console.log("Project Does not Exist In table!");
-                return res.send("NO such project Exists!");
+                response_json['response_code'] = null;
+                response_json['response_type'] = "failure";
+                response_json['content'] = null;
+                response_json['info'] = "NO such project Exists!";
+                return res.end(JSON.stringify(response_json));
+                // return res.send("NO such project Exists!");
             }
             else {
                 console.log("RESULT: ", result);
@@ -665,12 +748,22 @@ app.post('/add_project_to_user', function (req, res) {
                 con.query("Select projects from users where email=?",[userEmail], function (err, result) {
                     if (err) {
                         console.log(err);
-                        return res.send(err);
+                        response_json['response_code'] = null;
+                        response_json['response_type'] = "failure";
+                        response_json['content'] = null;
+                        response_json['info'] = err;
+                        return res.end(JSON.stringify(response_json));
+                        // return res.send(err);
                     }
                     else {
                         if (!result.length) {
                             console.log('No user by that email exists !');
-                            return res.send('NO user by that email exists !');
+                            response_json['response_code'] = null;
+                            response_json['response_type'] = "failure";
+                            response_json['content'] = null;
+                            response_json['info'] = "No user by that email exists !";
+                            return res.end(JSON.stringify(response_json));
+                            // return res.send('NO user by that email exists !');
                         }
                         else {
                             console.log("RESULT ", result[0]['projects']);
@@ -682,10 +775,20 @@ app.post('/add_project_to_user', function (req, res) {
                                 });
                                 console.log(userProjectsIntArray);
                                 if (userProjectsIntArray.length > 4) {
-                                    return res.send('Max Project Limit Reached');
+                                    response_json['response_code'] = null;
+                                    response_json['response_type'] = "failure";
+                                    response_json['content'] = null;
+                                    response_json['info'] = "Max Project Limit Reached!";
+                                    return res.end(JSON.stringify(response_json));
+                                    // return res.send('Max Project Limit Reached');
                                 }
                                 else if (userProjectsIntArray.indexOf(parseInt(projectId)) != -1) {
-                                    return res.send('Project Already Added to users Profile');
+                                    response_json['response_code'] = null;
+                                    response_json['response_type'] = "success";
+                                    response_json['content'] = null;
+                                    response_json['info'] = "Project Already Added to users Profile";
+                                    return res.end(JSON.stringify(response_json));
+                                    // return res.send('Project Already Added to users Profile');
                                 }
                                 else {
                                     userProjectsString += "," + projectId;
@@ -694,10 +797,20 @@ app.post('/add_project_to_user', function (req, res) {
                                     con.query("UPDATE users SET projects=? Where email=?",[userProjectsString,userEmail], function (error_update, res_update) {
                                         if (error_update) {
                                             console.log('FAILED TO UPDATE!');
-                                            return res.send('UPDATE FAILED!');
+                                            response_json['response_code'] = null;
+                                            response_json['response_type'] = "failure";
+                                            response_json['content'] = null;
+                                            response_json['info'] = error_update;
+                                            return res.end(JSON.stringify(response_json));
+                                            // return res.send('UPDATE FAILED!');
                                         }
                                         else {
-                                            return res.send('Project Added to User Profile !');
+                                            response_json['response_code'] = null;
+                                            response_json['response_type'] = "success";
+                                            response_json['content'] = null;
+                                            response_json['info'] = "Project Added to user's profile";
+                                            return res.end(JSON.stringify(response_json));
+                                            // return res.send('Project Added to User Profile !');
                                         }
                                     });
 
@@ -710,10 +823,20 @@ app.post('/add_project_to_user', function (req, res) {
                                 con.query("UPDATE users SET projects=? Where email=?",[projectId,userEmail], function (error_update, res_update) {
                                     if (error_update) {
                                         console.log('FAILED TO UPDATE!');
-                                        return res.send('UPDATE FAILED!');
+                                        response_json['response_code'] = null;
+                                        response_json['response_type'] = "failure";
+                                        response_json['content'] = null;
+                                        response_json['info'] = error_update;
+                                        return res.end(JSON.stringify(response_json));
+                                        // return res.send('UPDATE FAILED!');
                                     }
                                     else {
-                                        return res.send('Project Added to User Profile !');
+                                        response_json['response_code'] = null;
+                                        response_json['response_type'] = "success";
+                                        response_json['content'] = null;
+                                        response_json['info'] = "Project Added to user's profile";
+                                        return res.end(JSON.stringify(response_json));
+                                        // return res.send('Project Added to User Profile !');
                                     }
                                 });
                             }
@@ -740,18 +863,33 @@ app.post('/remove_project_from_user', function (req, res) {
     if (projectId.match(/[a-z]/i)) {
         // alphabet letters found
         console.log("Invalid Project Id");
-        return res.send("Invalid Project Id");
+        response_json['response_code'] = null;
+        response_json['response_type'] = "failure";
+        response_json['content'] = null;
+        response_json['info'] = "Invalid Project Id !";
+        return res.end(JSON.stringify(response_json));
+        // return res.send("Invalid Project Id");
     }
 
     con.query("Select projects from users where email=?",[userEmail], function (err, result) {
         if (err) {
             console.log(err);
-            return res.send(err);
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = err;
+            return res.end(JSON.stringify(response_json));
+            // return res.send(err);
         }
         else {
             if (!result.length) {
                 console.log('No user by that email exists !');
-                return res.send('NO user by that email exists !');
+                response_json['response_code'] = null;
+                response_json['response_type'] = "failure";
+                response_json['content'] = null;
+                response_json['info'] = "No user by that email exists !";
+                return res.end(JSON.stringify(response_json));
+                // return res.send('NO user by that email exists !');
             }
             else {
                 console.log("RESULT ", result[0]['projects']);
@@ -764,8 +902,13 @@ app.post('/remove_project_from_user', function (req, res) {
                     console.log(userProjectsIntArray);
 
                     if (userProjectsIntArray.indexOf(parseInt(projectId)) == -1) {
-                        console.log('No such Project is added to the user!');
-                        return res.send('No such Project is added to the user!');
+                        response_json['response_code'] = null;
+                        response_json['response_type'] = "failure";
+                        response_json['content'] = null;
+                        response_json['info'] = "No such Project is  Added to users Profile";
+                        return res.end(JSON.stringify(response_json));
+                        // console.log('No such Project is added to the user!');
+                        // return res.send('No such Project is added to the user!');
                     }
                     else {
                         var updateProjectsString = "";
@@ -786,17 +929,32 @@ app.post('/remove_project_from_user', function (req, res) {
                         con.query("UPDATE users SET projects=? Where email=?",[updateProjectsString,userEmail], function (error_update, res_update) {
                             if (error_update) {
                                 console.log('FAILED TO Delete Project!');
-                                return res.send('Delete Project FAILED!');
+                                // return res.send('Delete Project FAILED!');
+                                response_json['response_code'] = null;
+                                response_json['response_type'] = "failure";
+                                response_json['content'] = null;
+                                response_json['info'] = error_update;
+                                return res.end(JSON.stringify(response_json));
                             }
                             else {
-                                return res.send('Project Deleted from Users Profile !');
+                                response_json['response_code'] = null;
+                                response_json['response_type'] = "success";
+                                response_json['content'] = null;
+                                response_json['info'] = "Project Deleted from users Profile";
+                                return res.end(JSON.stringify(response_json));
+                                // return res.send('Project Deleted from Users Profile !');
                             }
                         });
                     }
                 }
                 else {
                     console.log('no PROJECT, FIELD NULL for user');
-                    return res.send('USER HAS NO PROJECTS TO DELETE !');
+                    response_json['response_code'] = null;
+                    response_json['response_type'] = "failure";
+                    response_json['content'] = null;
+                    response_json['info'] = "USER HAS NO PROJECTS TO DELETE !";
+                    return res.end(JSON.stringify(response_json));
+                    // return res.send('USER HAS NO PROJECTS TO DELETE !');
                 }
             }
         }
