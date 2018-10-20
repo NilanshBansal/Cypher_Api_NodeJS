@@ -436,6 +436,67 @@ app.get('/search_project/:project_name', function (req, res) {
     });
 });
 
+app.post('/get_user_projects',function(req,res){
+    var userEmail = req.body.userEmail;
+    con.query("Select projects from users where email=?",[userEmail],function(err,result){
+        if(err){
+            console.log(err);
+            return res.send(err);
+        }
+        else{
+            if (!result.length) {
+                console.log('No user by that email exists !');
+                return res.send('NO user by that email exists !');
+            }
+            else {
+                var userProjectsString;
+                var userProjectsStringArray = [];
+                // var userProjectsIntArray = [];
+                var response_return_projects = []
+                var response_return_project_obj = {}
+                console.log("RESULT ", result[0]['projects']);
+                if (result[0]['projects']) {
+                    userProjectsString = result[0]['projects'];
+                    userProjectsStringArray = userProjectsString.split(",");          
+                    // userProjectsStringArray.forEach(function (projectId) {
+                    //     userProjectsIntArray.push(parseInt(projectId));
+                    // });
+                    // console.log(userProjectsIntArray);
+
+                    console.log(userProjectsStringArray);
+                    userProjectsStringArray.forEach(function(projectId){
+                        con.query('Select * from projects where ID=?',[projectId],function(err_search_project,res_search_project){
+                            if(err_search_project){
+                                console.log(err_search_project);
+                                return res.end('Error Searching ');
+                            }
+                            else{
+                                if(!res_search_project.length){
+                                    console.log("Some error !");
+                                    return res.send('Error!');
+                                }
+                                else{
+                                    console.log("HERE: ",res_search_project[0]);
+                                    response_return_project_obj = {
+                                        "project_name":res_search_project[0]['project_name'],
+                                        "project_id":res_search_project[0]['ID']
+                                    };
+                                    //EROR TO CORRECT
+                                    response_return_projects.push(response_return_project_obj);
+                                }
+                            }
+                        });
+                    });
+                    console.log("RESPONSE BACKK: ",response_return_projects);
+                }
+                else{
+                    console.log('User has no PROJECT, FIELD NULL for user');
+                    return res.end('User has no Project Added!');
+                }
+            }
+        }
+    });
+});
 
 app.post('/add_project_to_user', function (req, res) {
     var projectId = req.body.projectId;
