@@ -44,16 +44,20 @@ var Twitter = mongoose.model('twitter_projects_report', twitterSchema);
 var Reddit = mongoose.model('reddit_projects_report', redditSchema);
 var Github = mongoose.model('github_projects_report',githubSchema);
 
-var from_email = '';
-var from_pass = '';
+var from_email = 'info@copernicusdata.com';
+var from_pass = 'Yuckdingduck18';
 
 var transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
     service: 'gmail',
+    port: 465,
+    secure: true,
     auth:{
         user: from_email,
         pass: from_pass
     }
 });
+
 
 var schema = new password_validator();
 schema
