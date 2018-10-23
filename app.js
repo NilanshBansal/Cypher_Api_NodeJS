@@ -9,6 +9,7 @@ var randomstring = require("randomstring");
 var nodemailer = require("nodemailer");
 var mongoose = require("mongoose");
 var datesBetween = require("dates-between");
+const request = require('request');
 var port = 8080;
 
 var Schema = mongoose.Schema;
@@ -36,13 +37,13 @@ var redditSchema = new Schema({
 var githubSchema = new Schema({
     date:String,
     project_name:String,
-    data: Schema.Types.Mixed
+    github_info: Schema.Types.Mixed
 });
 
 
-var Twitter = mongoose.model('twitter_projects_report', twitterSchema);
-var Reddit = mongoose.model('reddit_projects_report', redditSchema);
-var Github = mongoose.model('github_projects_report',githubSchema);
+var Twitter = mongoose.model('twitter_projects_reports', twitterSchema);
+var Reddit = mongoose.model('reddit_projects_reports', redditSchema);
+var Github = mongoose.model('github_projects_reports',githubSchema);
 
 var from_email = 'info@copernicusdata.com';
 var from_pass = 'Yuckdingduck18';
@@ -967,6 +968,28 @@ app.post('/remove_project_from_user', function (req, res) {
 
 });
 
+
+app.post('/checkaddress',function (req,res) {
+
+    address = req.body.address
+    request('https://etherscamdb.info/api/check/0x'+address, { json: true }, (err, res, body) => {
+        if (err) { console.log(err); return "Error"; }
+
+        if (body.result != "Neutral") {
+            resultObj = {
+                'status': body.result,
+                'name': body.entries[0].name,
+                'coin': body.entries[0].coin,
+                'category': body.entries[0].category
+            }
+            return resultObj
+        }
+        else {
+            return "Neutral"
+        }
+    });
+
+})
 
 app.listen(port, function () {
     console.log(`App is running on port ${port}`);
