@@ -58,22 +58,12 @@ var redditSentimentSchema = new Schema({
     date: String
 })
 
-// twitter sentiment schema
-var twitterSentimentSchema = new Schema({
-    project_name: String,
-    general_tweets_text: Array,
-    sentiment: Array,
-    overall_sentiment: Schema.Types.Mixed,
-    date: String
-});
-
-
 var Twitter = mongoose.model('twitter_projects_reports', twitterSchema);
 var Reddit = mongoose.model('reddit_projects_reports_counts', redditSchema);
 var Github = mongoose.model('github_projects_reports',githubSchema);
 var TwitterSentiment = mongoose.model('tweet_texts', twitterSentimentSchema);
-
-
+var RedditSentiment = mongoose.model('reddit_projects_reports_texts',redditSentimentSchema);
+ 
 var from_email = 'info@copernicusdata.com';
 var from_pass = 'Yuckdingduck18';
 
@@ -418,6 +408,27 @@ function formatDate(date) {
     return [year, month, day].join('-');
 }
 
+app.post('/checkaddress',function (req,res) {
+
+    address = req.body.address
+    request('https://etherscamdb.info/api/check/0x'+address, { json: true }, (err, res, body) => {
+        if (err) { console.log(err); return "Error"; }
+
+        if (body.result != "Neutral") {
+            resultObj = {
+                'status': body.result,
+                'name': body.entries[0].name,
+                'coin': body.entries[0].coin,
+                'category': body.entries[0].category
+            }
+            res.end(JSON.stringify(resultObj))
+        }
+        else {
+            res.end("Neutral")
+        }
+    });
+
+});
 
 app.post("/twitter_project_score",async function(req, res){
     // mongoose.connect("mongodb://localhost:27017/twitter", { useNewUrlParser: true });
@@ -447,6 +458,37 @@ app.post("/twitter_project_score",async function(req, res){
     response_json['content'] = record_Object;
     response_json['info'] = "success";
     res.end(JSON.stringify(response_json));
+});
+
+app.post('/twitter_sentiment', async function(req, res){
+    var project = req.body.project_name;
+    var from_date = req.body.from_date;
+    var to_date = req.body.to_date
+    var dates = [];
+    var records = [];
+    for (const date of datesBetween(new Date(from_date), new Date(to_date))) {
+        dates.push(formatDate(date));
+    }
+    await TwitterSentiment.find({project_name: project, date: {$in: dates}}, function(err, data){
+        if(err){
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = err;
+            res.end(JSON.stringify(response_json));
+        }else{
+
+            data.forEach(element => {
+                records.push({'sentiment':element['overall_sentiment'], 'date': element['date']});
+            });
+        }
+    });
+    response_json['response_code'] = null;
+    response_json['response_type'] = "success";
+    response_json['content'] = records;
+    response_json['info'] = "success";
+    res.end(JSON.stringify(response_json));
+
 });
 
 
@@ -513,6 +555,66 @@ app.post("/reddit_project_score", async function(req,res){
     return res.end(JSON.stringify(response_json));
 });
 
+app.post('/reddit_sentiment', async function(req, res){
+    var project = req.body.project_name;
+    var from_date = req.body.from_date;
+    var to_date = req.body.to_date
+    var dates = [];
+    var output_data = []
+
+    for (const date of datesBetween(new Date(from_date), new Date(to_date))) {
+        dates.push(formatDate(date));
+    }
+    await RedditSentiment.find({project_name: project, date: {$in: dates}}, function(err, data){
+        if(err){
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = err;
+            res.end(JSON.stringify(response_json));
+        }else{
+
+            data.forEach(element => {
+                output_data.push({"date":element['date'],"sentiment":element['overallsentiment']})
+            });
+        }
+    });
+    response_json['response_code'] = null;
+    response_json['response_type'] = "success";
+    response_json['content'] = output_data;
+    response_json['info'] = "success";
+    res.end(JSON.stringify(response_json));
+
+});
+
+
+app.get('/get_all_projects',function(req,res){
+    con.query("Select * from projects",function(err,result){
+        if(err){
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = err;
+            return res.end(JSON.stringify(response_json));
+        }
+        else{
+            if(!result.length){
+                response_json['response_code'] = null;
+                response_json['response_type'] = "success";
+                response_json['content'] = null;
+                response_json['info'] = "No projects to show !";
+                return res.end(JSON.stringify(response_json));
+            }
+            else{
+                response_json['response_code'] = null;
+                response_json['response_type'] = "success";
+                response_json['content'] = result;
+                response_json['info'] = "Projects Returned successfully!";
+                return res.end(JSON.stringify(response_json));
+            }
+        }
+    });
+});
 
 app.post('/add_project_to_database', function (req, res) {
     var projectName = req.body.project_name;
@@ -1012,59 +1114,6 @@ app.post('/remove_project_from_user', function (req, res) {
 });
 
 
-app.post('/checkaddress',function (req,res) {
-
-    address = req.body.address
-    request('https://etherscamdb.info/api/check/0x'+address, { json: true }, (err, res, body) => {
-        if (err) { console.log(err); return "Error"; }
-
-        if (body.result != "Neutral") {
-            resultObj = {
-                'status': body.result,
-                'name': body.entries[0].name,
-                'coin': body.entries[0].coin,
-                'category': body.entries[0].category
-            }
-            return resultObj
-        }
-        else {
-            return "Neutral"
-        }
-    });
-
-});
-
-
-app.post('/twitter_sentiment', async function(req, res){
-    var project = req.body.project_name;
-    var from_date = req.body.from_date;
-    var to_date = req.body.to_date
-    var dates = [];
-    var records = [];
-    for (const date of datesBetween(new Date(from_date), new Date(to_date))) {
-        dates.push(formatDate(date));
-    }
-    await TwitterSentiment.find({project_name: project, date: {$in: dates}}, function(err, data){
-        if(err){
-            response_json['response_code'] = null;
-            response_json['response_type'] = "failure";
-            response_json['content'] = null;
-            response_json['info'] = err;
-            res.end(JSON.stringify(response_json));
-        }else{
-
-            data.forEach(element => {
-                records.push({'sentiments':element['overall_sentiment'], 'date': element['date']});
-            });
-        }
-    });
-    response_json['response_code'] = null;
-    response_json['response_type'] = "success";
-    response_json['content'] = records;
-    response_json['info'] = "success";
-    res.end(JSON.stringify(response_json));
-
-});
 
 
 app.listen(port, function () {
