@@ -15,7 +15,7 @@ var port = 8080;
 var Schema = mongoose.Schema;
 
 //mongodb Connect
-mongoose.connect("mongodb://localhost:27017/twitter", { useNewUrlParser: true });
+mongoose.connect("mongodb://localhost:27017/copernicus", { useNewUrlParser: true });
 
 //mongoDB schemas
 //// twitter schema
@@ -41,9 +41,21 @@ var githubSchema = new Schema({
 });
 
 
+// twitter sentiment schema
+var twitterSentimentSchema = new Schema({
+    project_name: String,
+    general_tweets_text: Array,
+    sentiment: Array,
+    overall_sentiment: Schema.Types.Mixed,
+    date: String
+});
+
+
 var Twitter = mongoose.model('twitter_projects_reports', twitterSchema);
 var Reddit = mongoose.model('reddit_projects_reports', redditSchema);
 var Github = mongoose.model('github_projects_reports',githubSchema);
+var TwitterSentiment = mongoose.model('tweet_texts', twitterSentimentSchema);
+
 
 var from_email = 'info@copernicusdata.com';
 var from_pass = 'Yuckdingduck18';
@@ -479,6 +491,8 @@ app.post("/reddit_project_score", async function(req,res){
     response_json['info'] = "success";
     return res.end(JSON.stringify(response_json));
 });
+
+
 
 app.post('/add_project_to_database', function (req, res) {
     var projectName = req.body.project_name;
@@ -989,7 +1003,44 @@ app.post('/checkaddress',function (req,res) {
         }
     });
 
-})
+});
+
+app.post('/twitter_sentiment', async function(req, res){
+    var project = req.body.project_name;
+    var from_date = req.body.from_date;
+    var to_date = req.body.to_date
+    var dates = [];
+    var sentiment = {};
+    var records = [];
+    var res_dates = []
+    for (const date of datesBetween(new Date(from_date), new Date(to_date))) {
+        dates.push(formatDate(date));
+    }
+    await TwitterSentiment.find({project_name: project, date: {$in: dates}}, function(err, data){
+        if(err){
+            response_json['response_code'] = null;
+            response_json['response_type'] = "failure";
+            response_json['content'] = null;
+            response_json['info'] = err;
+            res.end(JSON.stringify(response_json));
+        }else{
+
+            data.forEach(element => {
+                records.push(element['overall_sentiment']);
+                res_dates.push(element['date']);
+            });
+        }
+    });
+    sentiment['sentiments'] = records;
+    sentiment['dates'] = res_dates;
+    response_json['response_code'] = null;
+    response_json['response_type'] = "success";
+    response_json['content'] = sentiment;
+    response_json['info'] = "success";
+    res.end(JSON.stringify(response_json));
+
+});
+
 
 app.listen(port, function () {
     console.log(`App is running on port ${port}`);
