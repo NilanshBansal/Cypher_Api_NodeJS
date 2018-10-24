@@ -449,42 +449,6 @@ app.post("/twitter_project_score",async function(req, res){
     res.end(JSON.stringify(response_json));
 });
 
-app.post('/twitter_sentiment', async function(req, res){
-    var project = req.body.project_name;
-    var from_date = req.body.from_date;
-    var to_date = req.body.to_date
-    var dates = [];
-    var sentiment = {};
-    var records = [];
-    var res_dates = []
-    for (const date of datesBetween(new Date(from_date), new Date(to_date))) {
-        dates.push(formatDate(date));
-    }
-    await TwitterSentiment.find({project_name: project, date: {$in: dates}}, function(err, data){
-        if(err){
-            response_json['response_code'] = null;
-            response_json['response_type'] = "failure";
-            response_json['content'] = null;
-            response_json['info'] = err;
-            res.end(JSON.stringify(response_json));
-        }else{
-
-            data.forEach(element => {
-                records.push(element['overall_sentiment']);
-                res_dates.push(element['date']);
-            });
-        }
-    });
-    sentiment['sentiments'] = records;
-    sentiment['dates'] = res_dates;
-    response_json['response_code'] = null;
-    response_json['response_type'] = "success";
-    response_json['content'] = sentiment;
-    response_json['info'] = "success";
-    res.end(JSON.stringify(response_json));
-
-});
-
 
 app.post("/github_project_score",async function(req, res){
     var project = req.body.project_name;
@@ -1070,41 +1034,6 @@ app.post('/checkaddress',function (req,res) {
 
 });
 
-app.post('/twitter_sentiment', async function(req, res){
-    var project = req.body.project_name;
-    var from_date = req.body.from_date;
-    var to_date = req.body.to_date
-    var dates = [];
-    var sentiment = {};
-    var records = [];
-    var res_dates = []
-    for (const date of datesBetween(new Date(from_date), new Date(to_date))) {
-        dates.push(formatDate(date));
-    }
-    await TwitterSentiment.find({project_name: project, date: {$in: dates}}, function(err, data){
-        if(err){
-            response_json['response_code'] = null;
-            response_json['response_type'] = "failure";
-            response_json['content'] = null;
-            response_json['info'] = err;
-            res.end(JSON.stringify(response_json));
-        }else{
-
-            data.forEach(element => {
-                records.push(element['overall_sentiment']);
-                res_dates.push(element['date']);
-            });
-        }
-    });
-    sentiment['sentiments'] = records;
-    sentiment['dates'] = res_dates;
-    response_json['response_code'] = null;
-    response_json['response_type'] = "success";
-    response_json['content'] = sentiment;
-    response_json['info'] = "success";
-    res.end(JSON.stringify(response_json));
-
-});
 
 app.post('/twitter_sentiment', async function(req, res){
     var project = req.body.project_name;
