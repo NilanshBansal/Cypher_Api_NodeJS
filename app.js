@@ -1111,9 +1111,7 @@ app.post('/twitter_sentiment', async function(req, res){
     var from_date = req.body.from_date;
     var to_date = req.body.to_date
     var dates = [];
-    var sentiment = {};
     var records = [];
-    var res_dates = []
     for (const date of datesBetween(new Date(from_date), new Date(to_date))) {
         dates.push(formatDate(date));
     }
@@ -1127,16 +1125,13 @@ app.post('/twitter_sentiment', async function(req, res){
         }else{
 
             data.forEach(element => {
-                records.push(element['overall_sentiment']);
-                res_dates.push(element['date']);
+                records.push({'sentiments':element['overall_sentiment'], 'date': element['date']});
             });
         }
     });
-    sentiment['sentiments'] = records;
-    sentiment['dates'] = res_dates;
     response_json['response_code'] = null;
     response_json['response_type'] = "success";
-    response_json['content'] = sentiment;
+    response_json['content'] = records;
     response_json['info'] = "success";
     res.end(JSON.stringify(response_json));
 
